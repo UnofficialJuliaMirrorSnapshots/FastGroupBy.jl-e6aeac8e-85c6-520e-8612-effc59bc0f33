@@ -1,3 +1,4 @@
+using DataFrames:rename!
 """
 Fast Group By algorithm
 """
@@ -12,9 +13,9 @@ group by for DataFrame API
 fastby(fn::Function, df::AbstractDataFrame, bycol::Symbol) = fastby(fn, df, bycol, bycol)
 
 function fastby(fn::Function, df::DF, bycol::Symbol, valcol::Symbol) where DF <: AbstractDataFrame
-    res_vec = fastby!(fn, copy(df[bycol]), copy(df[valcol]))
-    DataFrame([res_vec...], [bycol, :V1])
-    #DataFrame([collect(keys(res_dict)), collect(values(res_dict))], [bycol, :V1])
+    res_vec = DataFrame(fastby!(fn, copy(df[!, bycol]), copy(df[!, valcol])))
+    rename!(res_vec, :x1 => bycol, :x2 => :V1)
+    res_vec
 end
 
 # fastby(fn::NTuple{N, Function}, df::AbstractDataFrame, bycol::Symbol, valcol::NTuple{N,Symbol}) where N =
@@ -39,11 +40,16 @@ end
 """
 Internal: single-function fastby, one by, one val
 """
-function _fastby!(fn::Function, byvec::AbstractVector{T}, valvec::AbstractVector{S}) where {T <: Union{BaseRadixSortSafeTypes, Bool, String}, S}
+function _fastby!(fn::Function, byvec::AbstractVector{T}, valvec::AbstractVector{S}) where {T <: Union{BaseRadixSortSafeTypes, String}, S}
     # l = length(byvec)
     #grouptwo!(byvec, valvec)
     SortingLab.sorttwo!(byvec, valvec)
     #return _contiguousby(fn, byvec, valvec)
+    return _contiguousby_vec(fn, byvec, valvec)
+end
+
+function _fastby!(fn::Function, byvec::AbstractVector{Bool}, valvec::AbstractVector{S}) where S
+    grouptwo!(byvec, valvec)
     return _contiguousby_vec(fn, byvec, valvec)
 end
 
